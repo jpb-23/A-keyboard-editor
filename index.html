@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A-keyboard Layout Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>A-keyboard Layout Editor</h1>
+      <p>Grafischer Editor für das private Repository <code>jpb-23/A-keyboard</code></p>
+    </div>
+    <div class="toolbar">
+      <button id="githubButton" type="button">GitHub verbinden</button>
+      <button id="reloadButton" type="button">Aus Repository laden</button>
+      <button id="saveRepositoryButton" class="primary" type="button">Im Repository speichern</button>
+      <label class="file-button">JSON importieren<input id="importFile" type="file" accept="application/json,.json"></label>
+      <button id="exportButton" type="button">JSON exportieren</button>
+    </div>
+  </header>
+
+  <section id="githubPanel" class="github-panel" hidden>
+    <div class="github-panel-inner">
+      <div>
+        <h2>GitHub-Verbindung</h2>
+        <p>Ziel: <strong>jpb-23/A-keyboard</strong> · Branch: <strong>main</strong></p>
+      </div>
+      <label>Fine-grained Personal Access Token
+        <input id="githubToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+      </label>
+      <div class="github-actions">
+        <button id="testGithubButton" type="button">Verbinden &amp; laden</button>
+        <button id="disconnectGithubButton" type="button">Token entfernen</button>
+      </div>
+      <p class="token-note">Das Token bleibt nur im Arbeitsspeicher dieser geöffneten Seite und wird nicht in localStorage gespeichert. Es sollte ausschließlich Zugriff auf <strong>jpb-23/A-keyboard</strong> besitzen; benötigt wird <strong>Contents: Read and write</strong>.</p>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <section class="editor-card preview-card">
+      <div class="section-head">
+        <div>
+          <h2>Vorschau</h2>
+          <p id="statusText">Editor wird geladen …</p>
+        </div>
+        <div class="layer-actions">
+          <button id="addLayerButton" type="button">+ Ebene</button>
+          <button id="deleteLayerButton" class="danger-ghost" type="button">Ebene löschen</button>
+        </div>
+      </div>
+
+      <div id="layerTabs" class="layer-tabs"></div>
+      <div id="keyboardPreview" class="keyboard-preview" aria-label="Tastaturvorschau"></div>
+
+      <div class="preview-actions">
+        <button id="addRowButton" type="button">+ Zeile</button>
+        <button id="addKeyButton" type="button">+ Taste in ausgewählte Zeile</button>
+      </div>
+    </section>
+
+    <aside class="editor-card properties-card">
+      <h2>Ausgewählte Taste</h2>
+      <p id="selectionHint" class="muted">Klicke in der Vorschau auf eine Taste.</p>
+
+      <form id="keyForm" class="properties-form" hidden>
+        <label>Beschriftung
+          <input id="keyLabel" type="text" autocomplete="off">
+        </label>
+        <label>Ausgabe / Text
+          <input id="keyValue" type="text" autocomplete="off">
+        </label>
+        <label>Funktion
+          <select id="keyAction">
+            <option value="">Text ausgeben</option>
+            <option value="shift">Shift</option>
+            <option value="backspace">Löschen</option>
+            <option value="space">Leerzeichen</option>
+            <option value="enter">Enter</option>
+            <option value="left">Cursor links</option>
+            <option value="right">Cursor rechts</option>
+            <option value="tab">Tab</option>
+            <option value="layer">Ebene wechseln</option>
+          </select>
+        </label>
+        <label id="targetField">Ziel-Ebene
+          <select id="keyTarget"></select>
+        </label>
+        <label>Breite
+          <input id="keyWidth" type="number" min="0.35" max="8" step="0.05">
+        </label>
+        <label>Darstellung
+          <select id="keyStyle">
+            <option value="normal">Normal</option>
+            <option value="function">Funktionstaste</option>
+            <option value="accent">Akzent</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button id="moveLeftButton" type="button">← verschieben</button>
+          <button id="moveRightButton" type="button">verschieben →</button>
+          <button id="deleteKeyButton" class="danger" type="button">Taste löschen</button>
+        </div>
+      </form>
+
+      <hr>
+
+      <h2>Ebene</h2>
+      <div class="properties-form compact">
+        <label>Name / ID
+          <input id="layerId" type="text" autocomplete="off">
+        </label>
+        <label>Beschriftung
+          <input id="layerLabel" type="text" autocomplete="off">
+        </label>
+        <button id="saveLayerButton" type="button">Ebene speichern</button>
+      </div>
+
+      <hr>
+
+      <h2>Direktes Speichern</h2>
+      <p class="muted">Der Button <strong>Im Repository speichern</strong> aktualisiert direkt <code>app/src/main/assets/keyboard-layout.json</code> im privaten Repository. Der Commit auf <code>main</code> startet dort automatisch den APK-Build.</p>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
