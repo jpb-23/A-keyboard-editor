@@ -34,7 +34,7 @@
         <button id="testGithubButton" type="button">Verbinden &amp; laden</button>
         <button id="disconnectGithubButton" type="button">Token entfernen</button>
       </div>
-      <p class="token-note">Das Token bleibt nur im Arbeitsspeicher dieser geöffneten Seite und wird nicht in localStorage gespeichert. Es sollte ausschließlich Zugriff auf <strong>jpb-23/A-keyboard</strong> besitzen; benötigt wird <strong>Contents: Read and write</strong>.</p>
+      <p class="token-note">Das Token bleibt nur im Arbeitsspeicher dieser geöffneten Seite und wird nicht in localStorage gespeichert. Benötigt wird für <strong>jpb-23/A-keyboard</strong> ausschließlich <strong>Contents: Read and write</strong>.</p>
     </div>
   </section>
 
@@ -49,6 +49,10 @@
           <button id="addLayerButton" type="button">+ Ebene</button>
           <button id="deleteLayerButton" class="danger-ghost" type="button">Ebene löschen</button>
         </div>
+      </div>
+
+      <div class="feature-note">
+        Die Ebene <strong>😊 Emoji</strong> wird bei älteren Layouts automatisch ergänzt. Wortvorschläge erscheinen in der Android-Tastatur automatisch oberhalb der ABC-Ebene und werden lokal/offline erzeugt.
       </div>
 
       <div id="layerTabs" class="layer-tabs"></div>
@@ -68,9 +72,11 @@
         <label>Beschriftung
           <input id="keyLabel" type="text" autocomplete="off">
         </label>
+
         <label>Ausgabe / Text
           <input id="keyValue" type="text" autocomplete="off">
         </label>
+
         <label>Funktion
           <select id="keyAction">
             <option value="">Text ausgeben</option>
@@ -84,12 +90,15 @@
             <option value="layer">Ebene wechseln</option>
           </select>
         </label>
+
         <label id="targetField">Ziel-Ebene
           <select id="keyTarget"></select>
         </label>
+
         <label>Breite
           <input id="keyWidth" type="number" min="0.35" max="8" step="0.05">
         </label>
+
         <label>Darstellung
           <select id="keyStyle">
             <option value="normal">Normal</option>
@@ -97,6 +106,39 @@
             <option value="accent">Akzent</option>
           </select>
         </label>
+
+        <div class="property-group">
+          <label class="check-row"><input id="useBackgroundColor" type="checkbox"> Eigene Tastenfarbe</label>
+          <div class="color-row">
+            <input id="keyBackgroundColor" type="color" value="#ffffff">
+            <input id="keyBackgroundColorText" type="text" value="#ffffff" maxlength="9" spellcheck="false" aria-label="Tastenfarbe als Hexwert">
+          </div>
+        </div>
+
+        <div class="property-group">
+          <label class="check-row"><input id="useTextColor" type="checkbox"> Eigene Text-/Iconfarbe</label>
+          <div class="color-row">
+            <input id="keyTextColor" type="color" value="#202124">
+            <input id="keyTextColorText" type="text" value="#202124" maxlength="9" spellcheck="false" aria-label="Textfarbe als Hexwert">
+          </div>
+        </div>
+
+        <div class="property-group">
+          <span class="field-title">Eigenes Icon</span>
+          <div id="iconPreview" class="icon-preview">Kein Icon</div>
+          <label class="file-button secondary-file">Bild auswählen
+            <input id="keyIconFile" type="file" accept="image/png,image/jpeg,image/webp">
+          </label>
+          <button id="removeIconButton" type="button">Icon entfernen</button>
+          <small>PNG, JPG oder WebP. Maximal 64 KB pro Icon. Das Bild wird direkt im Layout gespeichert.</small>
+        </div>
+
+        <label class="check-row repeat-row">
+          <input id="keyRepeat" type="checkbox">
+          Bei Gedrückthalten wiederholen
+        </label>
+        <small class="muted compact-note">Delete sowie Cursor links/rechts sind standardmäßig wiederholbar. Für normale Zeichen kannst du die Wiederholung pro Taste aktivieren.</small>
+
         <div class="form-actions">
           <button id="moveLeftButton" type="button">← verschieben</button>
           <button id="moveRightButton" type="button">verschieben →</button>
