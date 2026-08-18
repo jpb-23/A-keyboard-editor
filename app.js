@@ -1,9 +1,11 @@
-const STORAGE_KEY = 'a-keyboard-layout-editor-v3';
+const STORAGE_KEY = 'a-keyboard-layout-editor-v4';
 const GITHUB_OWNER = 'jpb-23';
 const GITHUB_REPO = 'A-keyboard';
 const GITHUB_BRANCH = 'main';
 const GITHUB_LAYOUT_PATH = 'app/src/main/assets/keyboard-layout.json';
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_LAYOUT_PATH}`;
+const MAX_ICON_BYTES = 64 * 1024;
+const MAX_RECOMMENDED_JSON_BYTES = 900 * 1024;
 
 let layout = null;
 let currentLayerId = null;
@@ -18,17 +20,37 @@ function key(value) {
   return { label: value, value };
 }
 
-function action(label, actionName, width = 1, style = 'normal') {
-  return { label, action: actionName, width, style };
+function action(label, actionName, width = 1, style = 'normal', repeat = false) {
+  return { label, action: actionName, width, style, repeat };
 }
 
 function layerKey(label, target, width = 1) {
-  return { label, action: 'layer', target, width, style: 'function' };
+  return { label, action: 'layer', target, width, style: 'function', repeat: false };
+}
+
+function emojiLayer() {
+  return {
+    id: 'emoji',
+    label: '😊 Emoji',
+    rows: [
+      ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','🙂'].map(key),
+      ['😍','🥰','😘','😎','🤓','🤔','🙄','😴','😭','😡'].map(key),
+      ['👍','👎','👏','🙏','💪','👌','✌️','🤝','❤️','🔥'].map(key),
+      ['🎉','✅','❌','⭐','💡','🚀','📌','📱','💻','⌚'].map(key),
+      [
+        layerKey('ABC', 'abc', 1.35),
+        layerKey('123', 'symbols', 1.25),
+        action('Leerzeichen', 'space', 3.2),
+        action('⌫', 'backspace', 1.25, 'function', true),
+        action('↵', 'enter', 1.25, 'accent')
+      ]
+    ]
+  };
 }
 
 const starterLayout = {
   name: 'A-keyboard',
-  version: 1,
+  version: 2,
   defaultLayer: 'abc',
   layers: [
     {
@@ -37,8 +59,8 @@ const starterLayout = {
       rows: [
         ['q','w','e','r','t','z','u','i','o','p'].map(key),
         ['a','s','d','f','g','h','j','k','l','ß'].map(key),
-        [action('⇧','shift',1.35,'function'), ...['y','x','c','v','b','n','m','ü','ö','ä'].map(key), action('⌫','backspace',1.35,'function')],
-        [layerKey('123','symbols',1.35), key(','), layerKey('CODE','code',1.45), action('Leerzeichen','space',3.3), key('.'), action('←','left',1.15,'function'), action('→','right',1.15,'function'), action('↵','enter',1.35,'accent')]
+        [action('⇧','shift',1.35,'function'), ...['y','x','c','v','b','n','m','ü','ö','ä'].map(key), action('⌫','backspace',1.35,'function',true)],
+        [layerKey('123','symbols',1.35), key(','), layerKey('CODE','code',1.45), layerKey('😊','emoji',1.1), action('Leerzeichen','space',3.3), key('.'), action('←','left',1.15,'function',true), action('→','right',1.15,'function',true), action('↵','enter',1.35,'accent')]
       ]
     },
     {
@@ -47,8 +69,8 @@ const starterLayout = {
       rows: [
         ['1','2','3','4','5','6','7','8','9','0'].map(key),
         ['@','#','€','_','&','-','+','(',')'].map(key),
-        ['!','?','%','*',"'",'"',':',';','='].map(key).concat(action('⌫','backspace',1.35,'function')),
-        [layerKey('ABC','abc',1.35), layerKey('CODE','code',1.45), action('Leerzeichen','space',3.8), action('←','left',1.15,'function'), action('→','right',1.15,'function'), action('↵','enter',1.35,'accent')]
+        ['!','?','%','*',"'",'"',':',';','='].map(key).concat(action('⌫','backspace',1.35,'function',true)),
+        [layerKey('ABC','abc',1.35), layerKey('CODE','code',1.45), layerKey('😊','emoji',1.1), action('Leerzeichen','space',3.8), action('←','left',1.15,'function',true), action('→','right',1.15,'function',true), action('↵','enter',1.35,'accent')]
       ]
     },
     {
@@ -57,10 +79,11 @@ const starterLayout = {
       rows: [
         ['<','>','</','/>','=','"',"'",';'].map(key),
         ['{','}','[',']','(',')',':','_'].map(key),
-        ['$','#','@','&','|','\\','/','`'].map(key).concat(action('⌫','backspace',1.35,'function')),
-        [layerKey('ABC','abc',1.35), layerKey('123','symbols',1.35), action('TAB','tab',1.15,'function'), action('Leerzeichen','space',3.2), action('←','left',1.15,'function'), action('→','right',1.15,'function'), action('↵','enter',1.35,'accent')]
+        ['$','#','@','&','|','\\','/','`'].map(key).concat(action('⌫','backspace',1.35,'function',true)),
+        [layerKey('ABC','abc',1.35), layerKey('123','symbols',1.35), layerKey('😊','emoji',1.1), action('TAB','tab',1.15,'function'), action('Leerzeichen','space',3.2), action('←','left',1.15,'function',true), action('→','right',1.15,'function',true), action('↵','enter',1.35,'accent')]
       ]
-    }
+    },
+    emojiLayer()
   ]
 };
 
@@ -135,11 +158,66 @@ async function fetchRepositoryFile() {
   };
 }
 
-function setLayout(newLayout, status) {
-  if (!newLayout || !Array.isArray(newLayout.layers) || newLayout.layers.length === 0) {
+function isRepeatAction(actionName) {
+  return actionName === 'backspace' || actionName === 'left' || actionName === 'right';
+}
+
+function normalizeKey(keyData) {
+  if (!keyData || typeof keyData !== 'object') return { label: '', value: '', width: 1, style: 'normal' };
+  if (keyData.width == null || Number.isNaN(Number(keyData.width))) keyData.width = 1;
+  if (!keyData.style) keyData.style = 'normal';
+  if (keyData.repeat == null) keyData.repeat = isRepeatAction(keyData.action || '');
+  return keyData;
+}
+
+function normalizeLayout(input) {
+  if (!input || !Array.isArray(input.layers) || input.layers.length === 0) {
     throw new Error('Ungültiges Layout: layers fehlt oder ist leer.');
   }
-  layout = newLayout;
+
+  if (!input.name) input.name = 'A-keyboard';
+  input.version = Math.max(2, Number(input.version) || 1);
+  if (!input.defaultLayer) input.defaultLayer = input.layers[0].id;
+
+  for (const layer of input.layers) {
+    if (!Array.isArray(layer.rows)) layer.rows = [[]];
+    for (const row of layer.rows) {
+      if (!Array.isArray(row)) continue;
+      row.forEach(normalizeKey);
+    }
+  }
+
+  ensureEmojiSupport(input);
+  return input;
+}
+
+function ensureEmojiSupport(input) {
+  if (!input.layers.some(layer => layer.id === 'emoji')) {
+    input.layers.push(emojiLayer());
+  }
+
+  for (const layerId of ['abc', 'symbols', 'code']) {
+    const layer = input.layers.find(item => item.id === layerId);
+    if (!layer) continue;
+
+    const exists = layer.rows.some(row => Array.isArray(row) && row.some(item => item.action === 'layer' && item.target === 'emoji'));
+    if (exists) continue;
+
+    let targetRow = [...layer.rows].reverse().find(row => Array.isArray(row) && row.length > 0);
+    if (!targetRow) {
+      targetRow = [];
+      layer.rows.push(targetRow);
+    }
+
+    const spaceIndex = targetRow.findIndex(item => item.action === 'space');
+    const emojiKey = layerKey('😊', 'emoji', 1.1);
+    if (spaceIndex >= 0) targetRow.splice(spaceIndex, 0, emojiKey);
+    else targetRow.push(emojiKey);
+  }
+}
+
+function setLayout(newLayout, status) {
+  layout = normalizeLayout(newLayout);
   currentLayerId = layout.defaultLayer || layout.layers[0].id;
   if (!findLayer(currentLayerId)) currentLayerId = layout.layers[0].id;
   selected = null;
@@ -205,11 +283,35 @@ function renderKeyboard() {
     });
 
     row.forEach((keyData, keyIndex) => {
+      normalizeKey(keyData);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `keyboard-key ${keyData.style || 'normal'}`;
-      button.textContent = keyData.label || keyData.value || 'Taste';
       button.style.flexGrow = String(Math.max(0.35, Number(keyData.width) || 1));
+      button.style.position = 'relative';
+      if (keyData.backgroundColor) button.style.background = keyData.backgroundColor;
+      if (keyData.textColor) button.style.color = keyData.textColor;
+
+      if (keyData.icon) {
+        const image = document.createElement('img');
+        image.className = 'key-icon';
+        image.src = keyData.icon;
+        image.alt = '';
+        button.appendChild(image);
+      }
+
+      const label = document.createElement('span');
+      label.textContent = keyData.label || keyData.value || 'Taste';
+      button.appendChild(label);
+
+      if (keyData.repeat) {
+        const badge = document.createElement('span');
+        badge.className = 'repeat-badge';
+        badge.textContent = '↻';
+        badge.title = 'Wiederholt bei Gedrückthalten';
+        button.appendChild(badge);
+      }
+
       if (selected && selected.row === rowIndex && selected.key === keyIndex) {
         button.classList.add('selected');
       }
@@ -228,9 +330,14 @@ function renderKeyboard() {
 }
 
 function describeKey(keyData) {
-  if (keyData.action === 'layer') return `Ebene wechseln → ${keyData.target || '?'}`;
-  if (keyData.action) return `Funktion: ${keyData.action}`;
-  return `Ausgabe: ${keyData.value ?? ''}`;
+  const parts = [];
+  if (keyData.action === 'layer') parts.push(`Ebene wechseln → ${keyData.target || '?'}`);
+  else if (keyData.action) parts.push(`Funktion: ${keyData.action}`);
+  else parts.push(`Ausgabe: ${keyData.value ?? ''}`);
+  if (keyData.repeat) parts.push('Wiederholung bei Halten');
+  if (keyData.backgroundColor) parts.push(`Farbe: ${keyData.backgroundColor}`);
+  if (keyData.icon) parts.push('eigenes Icon');
+  return parts.join(' · ');
 }
 
 function selectedKey() {
@@ -246,13 +353,38 @@ function renderSelection() {
   fillTargetOptions();
   if (!keyData) return;
 
+  normalizeKey(keyData);
   $('keyLabel').value = keyData.label ?? '';
   $('keyValue').value = keyData.value ?? '';
   $('keyAction').value = keyData.action ?? '';
   $('keyTarget').value = keyData.target ?? '';
   $('keyWidth').value = keyData.width ?? 1;
   $('keyStyle').value = keyData.style ?? 'normal';
+  $('keyRepeat').checked = Boolean(keyData.repeat);
+
+  setColorControls('Background', keyData.backgroundColor, '#ffffff');
+  setColorControls('Text', keyData.textColor, '#202124');
+  renderIconPreview(keyData.icon || '');
   toggleTargetField();
+}
+
+function setColorControls(kind, value, fallback) {
+  const checkbox = $(`use${kind}Color`);
+  const picker = $(`key${kind}Color`);
+  const text = $(`key${kind}ColorText`);
+  const active = Boolean(value);
+  checkbox.checked = active;
+  const normalized = normalizeHexColor(value || fallback) || fallback;
+  picker.value = normalized.length === 9 ? normalized.slice(0, 7) : normalized;
+  text.value = value || normalized;
+  picker.disabled = !active;
+  text.disabled = !active;
+}
+
+function normalizeHexColor(value) {
+  const text = String(value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(text) || /^#[0-9a-fA-F]{8}$/.test(text)) return text.toUpperCase();
+  return '';
 }
 
 function fillTargetOptions() {
@@ -288,6 +420,7 @@ function applyKeyForm() {
   const actionName = $('keyAction').value;
   keyData.width = Math.max(0.35, Number($('keyWidth').value) || 1);
   keyData.style = $('keyStyle').value || 'normal';
+  keyData.repeat = $('keyRepeat').checked;
 
   delete keyData.value;
   delete keyData.action;
@@ -300,7 +433,84 @@ function applyKeyForm() {
     keyData.value = $('keyValue').value;
   }
 
+  applyColorField(keyData, 'Background', 'backgroundColor');
+  applyColorField(keyData, 'Text', 'textColor');
   saveLocal();
+  renderKeyboard();
+}
+
+function applyColorField(keyData, kind, property) {
+  if (!$(`use${kind}Color`).checked) {
+    delete keyData[property];
+    return;
+  }
+  const value = normalizeHexColor($(`key${kind}ColorText`).value);
+  if (value) keyData[property] = value;
+}
+
+function syncColorFromPicker(kind) {
+  const value = $(`key${kind}Color`).value.toUpperCase();
+  $(`key${kind}ColorText`).value = value;
+  applyKeyForm();
+}
+
+function syncColorFromText(kind) {
+  const value = normalizeHexColor($(`key${kind}ColorText`).value);
+  if (value && value.length === 7) $(`key${kind}Color`).value = value;
+  applyKeyForm();
+}
+
+function toggleCustomColor(kind) {
+  const active = $(`use${kind}Color`).checked;
+  $(`key${kind}Color`).disabled = !active;
+  $(`key${kind}ColorText`).disabled = !active;
+  applyKeyForm();
+}
+
+function renderIconPreview(icon) {
+  const container = $('iconPreview');
+  container.innerHTML = '';
+  if (!icon) {
+    container.textContent = 'Kein Icon';
+    return;
+  }
+  const image = document.createElement('img');
+  image.src = icon;
+  image.alt = 'Icon-Vorschau';
+  container.appendChild(image);
+}
+
+function importKeyIcon(file) {
+  const keyData = selectedKey();
+  if (!keyData || !file) return;
+
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    alert('Bitte PNG, JPG oder WebP verwenden.');
+    return;
+  }
+  if (file.size > MAX_ICON_BYTES) {
+    alert(`Das Icon ist zu groß (${Math.ceil(file.size / 1024)} KB). Maximal erlaubt sind ${MAX_ICON_BYTES / 1024} KB.`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    keyData.icon = String(reader.result || '');
+    saveLocal();
+    renderSelection();
+    renderKeyboard();
+    setStatus(`Icon für „${keyData.label || 'Taste'}“ übernommen.`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeKeyIcon() {
+  const keyData = selectedKey();
+  if (!keyData) return;
+  delete keyData.icon;
+  $('keyIconFile').value = '';
+  saveLocal();
+  renderSelection();
   renderKeyboard();
 }
 
@@ -318,7 +528,7 @@ function addKeyToSelectedRow() {
   if (!layer.rows.length) layer.rows.push([]);
   selectedRowIndex = Math.min(selectedRowIndex, layer.rows.length - 1);
   const row = layer.rows[selectedRowIndex];
-  row.push({ label: 'neu', value: 'neu', width: 1, style: 'normal' });
+  row.push({ label: 'neu', value: 'neu', width: 1, style: 'normal', repeat: false });
   selected = { row: selectedRowIndex, key: row.length - 1 };
   saveLocal();
   render();
@@ -357,6 +567,10 @@ function addLayer() {
 }
 
 function deleteLayer() {
+  if (currentLayerId === 'emoji') {
+    alert('Die Emoji-Ebene ist Teil der Tastaturfunktion und kann bearbeitet, aber nicht gelöscht werden.');
+    return;
+  }
   if (layout.layers.length <= 1) {
     alert('Mindestens eine Ebene muss erhalten bleiben.');
     return;
@@ -378,6 +592,10 @@ function saveLayerMetadata() {
   const newId = $('layerId').value.trim();
   const newLabel = $('layerLabel').value.trim();
 
+  if (oldId === 'emoji' && newId !== 'emoji') {
+    alert('Die System-ID der Emoji-Ebene muss „emoji“ bleiben. Die Beschriftung kannst du ändern.');
+    return;
+  }
   if (!/^[A-Za-z0-9_-]+$/.test(newId)) {
     alert('Die Ebenen-ID darf nur Buchstaben, Zahlen, _ und - enthalten.');
     return;
@@ -406,8 +624,13 @@ function saveLayerMetadata() {
   render();
 }
 
+function serializedLayout() {
+  normalizeLayout(layout);
+  return JSON.stringify(layout, null, 2) + '\n';
+}
+
 function exportLayout() {
-  const json = JSON.stringify(layout, null, 2) + '\n';
+  const json = serializedLayout();
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -424,6 +647,7 @@ function importLayout(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
+      repositoryLoadedAtSha = '';
       setLayout(JSON.parse(reader.result), `Importiert: ${file.name}`);
     } catch (error) {
       alert(`JSON konnte nicht geladen werden: ${error.message}`);
@@ -442,77 +666,72 @@ function readTokenFromField() {
   return githubToken;
 }
 
+function setBusy(busy) {
+  for (const id of ['testGithubButton', 'reloadButton', 'saveRepositoryButton']) {
+    $(id).disabled = busy;
+  }
+}
+
 async function connectAndLoad() {
   if (!readTokenFromField()) {
-    setStatus('Bitte zuerst ein GitHub-Token eingeben.');
+    alert('Bitte zuerst das Fine-grained GitHub-Token eingeben.');
     return;
   }
-
-  setBusy('testGithubButton', true, 'Lade …');
-  try {
-    const result = await fetchRepositoryFile();
-    repositoryLoadedAtSha = result.sha;
-    setLayout(result.layout, 'GitHub-Verbindung erfolgreich. Aktuelles Layout aus dem privaten Repository geladen.');
-    $('githubButton').textContent = 'GitHub verbunden';
-    $('githubPanel').hidden = true;
-  } catch (error) {
-    setStatus(`GitHub-Verbindung fehlgeschlagen: ${friendlyGithubError(error)}`);
-  } finally {
-    setBusy('testGithubButton', false, 'Verbinden & laden');
-  }
+  await loadFromRepository();
+  $('githubPanel').hidden = true;
 }
 
-function disconnectGithub() {
-  githubToken = '';
-  repositoryLoadedAtSha = '';
-  $('githubToken').value = '';
-  $('githubButton').textContent = 'GitHub verbinden';
-  setStatus('GitHub-Token aus dieser Seite entfernt.');
-}
-
-async function loadRepositoryLayout() {
+async function loadFromRepository() {
   if (!githubToken) {
     $('githubPanel').hidden = false;
     $('githubToken').focus();
-    setStatus('Zum Laden aus dem privaten Repository zuerst GitHub verbinden.');
+    setStatus('GitHub-Token erforderlich.');
     return;
   }
 
-  setBusy('reloadButton', true, 'Lade …');
+  setBusy(true);
+  setStatus('Layout wird aus dem privaten Repository geladen …');
   try {
     const result = await fetchRepositoryFile();
     repositoryLoadedAtSha = result.sha;
-    setLayout(result.layout, 'Aktuelles Layout aus GitHub geladen.');
+    setLayout(result.layout, `Geladen aus ${GITHUB_OWNER}/${GITHUB_REPO} · ${GITHUB_BRANCH}`);
   } catch (error) {
-    setStatus(`Repository konnte nicht geladen werden: ${friendlyGithubError(error)}`);
+    setStatus(`GitHub-Laden fehlgeschlagen: ${error.message}`);
+    alert(`GitHub-Laden fehlgeschlagen:\n${error.message}\n\nPrüfe Token, Repository-Auswahl und Contents: Read and write.`);
   } finally {
-    setBusy('reloadButton', false, 'Aus Repository laden');
+    setBusy(false);
   }
 }
 
-async function saveLayoutToRepository() {
-  if (!layout) return;
-  if (!githubToken && !readTokenFromField()) {
+async function saveToRepository() {
+  if (!githubToken) {
     $('githubPanel').hidden = false;
     $('githubToken').focus();
-    setStatus('Zum direkten Speichern bitte zuerst GitHub verbinden.');
+    setStatus('GitHub-Token erforderlich.');
     return;
   }
 
-  setBusy('saveRepositoryButton', true, 'Speichere …');
+  setBusy(true);
+  setStatus('Prüfe aktuelle Repository-Version …');
   try {
     const current = await fetchRepositoryFile();
-
-    if (repositoryLoadedAtSha && repositoryLoadedAtSha !== current.sha) {
-      const proceed = confirm('Die Layout-Datei wurde seit dem letzten Laden auf GitHub geändert. Deine lokale Version kann diese Änderung überschreiben. Trotzdem speichern?');
-      if (!proceed) {
-        setStatus('Speichern abgebrochen. Lade zuerst die aktuelle Repository-Version.');
+    if (repositoryLoadedAtSha && current.sha !== repositoryLoadedAtSha) {
+      const overwrite = confirm('keyboard-layout.json wurde seit deinem letzten Laden im Repository geändert. Trotzdem mit dem aktuellen Editor-Stand überschreiben?');
+      if (!overwrite) {
+        setStatus('Speichern abgebrochen: Repository-Datei wurde zwischenzeitlich geändert.');
         return;
       }
     }
 
-    const json = JSON.stringify(layout, null, 2) + '\n';
-    const result = await githubRequest(GITHUB_API, {
+    const json = serializedLayout();
+    const byteLength = new TextEncoder().encode(json).length;
+    if (byteLength > MAX_RECOMMENDED_JSON_BYTES) {
+      const proceed = confirm(`Das Layout ist durch eingebettete Icons bereits ${Math.ceil(byteLength / 1024)} KB groß. Trotzdem speichern? Zu viele große Icons können die GitHub-Dateigrenze erreichen.`);
+      if (!proceed) return;
+    }
+
+    setStatus('Speichere keyboard-layout.json direkt auf main …');
+    const response = await githubRequest(GITHUB_API, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -523,74 +742,87 @@ async function saveLayoutToRepository() {
       })
     });
 
-    repositoryLoadedAtSha = result?.content?.sha || '';
+    repositoryLoadedAtSha = response?.content?.sha || '';
     saveLocal();
-    setStatus('Layout auf GitHub gespeichert. Der Commit auf main startet automatisch den APK-Build.');
+    setStatus('Gespeichert auf main. Der APK-Build wurde durch den Commit gestartet.');
   } catch (error) {
-    setStatus(`Speichern fehlgeschlagen: ${friendlyGithubError(error)}`);
+    setStatus(`GitHub-Speichern fehlgeschlagen: ${error.message}`);
+    alert(`GitHub-Speichern fehlgeschlagen:\n${error.message}`);
   } finally {
-    setBusy('saveRepositoryButton', false, 'Im Repository speichern');
+    setBusy(false);
   }
 }
 
-function friendlyGithubError(error) {
-  if (error?.status === 401) return 'Token ungültig oder abgelaufen.';
-  if (error?.status === 403) return 'Zugriff verweigert. Prüfe beim Fine-grained Token „Contents: Read and write“ für jpb-23/A-keyboard.';
-  if (error?.status === 404) return 'Repository oder Layout-Datei nicht gefunden. Prüfe, ob das Token Zugriff auf das private Repository jpb-23/A-keyboard hat.';
-  if (error?.status === 409) return 'GitHub meldet einen Konflikt. Lade das Repository-Layout neu und versuche es erneut.';
-  return error?.message || String(error);
+function disconnectGithub() {
+  githubToken = '';
+  repositoryLoadedAtSha = '';
+  $('githubToken').value = '';
+  setStatus('GitHub-Token aus dieser Browser-Sitzung entfernt.');
 }
 
-function setBusy(id, busy, busyText) {
-  const button = $(id);
-  if (!button) return;
-  if (busy) {
-    button.dataset.originalText = button.textContent;
-    button.textContent = busyText;
-    button.disabled = true;
-  } else {
-    button.textContent = button.dataset.originalText || button.textContent;
-    button.disabled = false;
+function bindEvents() {
+  $('githubButton').addEventListener('click', toggleGithubPanel);
+  $('testGithubButton').addEventListener('click', connectAndLoad);
+  $('disconnectGithubButton').addEventListener('click', disconnectGithub);
+  $('reloadButton').addEventListener('click', loadFromRepository);
+  $('saveRepositoryButton').addEventListener('click', saveToRepository);
+  $('exportButton').addEventListener('click', exportLayout);
+  $('importFile').addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) importLayout(file);
+    event.target.value = '';
+  });
+
+  for (const id of ['keyLabel', 'keyValue', 'keyWidth', 'keyStyle', 'keyTarget']) {
+    $(id).addEventListener('input', applyKeyForm);
+    $(id).addEventListener('change', applyKeyForm);
   }
+  $('keyAction').addEventListener('change', () => {
+    toggleTargetField();
+    applyKeyForm();
+    renderSelection();
+  });
+  $('keyRepeat').addEventListener('change', applyKeyForm);
+
+  $('useBackgroundColor').addEventListener('change', () => toggleCustomColor('Background'));
+  $('keyBackgroundColor').addEventListener('input', () => syncColorFromPicker('Background'));
+  $('keyBackgroundColorText').addEventListener('change', () => syncColorFromText('Background'));
+  $('useTextColor').addEventListener('change', () => toggleCustomColor('Text'));
+  $('keyTextColor').addEventListener('input', () => syncColorFromPicker('Text'));
+  $('keyTextColorText').addEventListener('change', () => syncColorFromText('Text'));
+
+  $('keyIconFile').addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) importKeyIcon(file);
+    event.target.value = '';
+  });
+  $('removeIconButton').addEventListener('click', removeKeyIcon);
+
+  $('moveLeftButton').addEventListener('click', () => moveSelected(-1));
+  $('moveRightButton').addEventListener('click', () => moveSelected(1));
+  $('deleteKeyButton').addEventListener('click', deleteSelectedKey);
+  $('addRowButton').addEventListener('click', addRow);
+  $('addKeyButton').addEventListener('click', addKeyToSelectedRow);
+  $('addLayerButton').addEventListener('click', addLayer);
+  $('deleteLayerButton').addEventListener('click', deleteLayer);
+  $('saveLayerButton').addEventListener('click', saveLayerMetadata);
 }
 
-['keyLabel','keyValue','keyWidth','keyStyle','keyTarget'].forEach(id => {
-  $(id).addEventListener('input', applyKeyForm);
-  $(id).addEventListener('change', applyKeyForm);
-});
-
-$('keyAction').addEventListener('change', () => {
-  toggleTargetField();
-  applyKeyForm();
-});
-$('addRowButton').addEventListener('click', addRow);
-$('addKeyButton').addEventListener('click', addKeyToSelectedRow);
-$('deleteKeyButton').addEventListener('click', deleteSelectedKey);
-$('moveLeftButton').addEventListener('click', () => moveSelected(-1));
-$('moveRightButton').addEventListener('click', () => moveSelected(1));
-$('addLayerButton').addEventListener('click', addLayer);
-$('deleteLayerButton').addEventListener('click', deleteLayer);
-$('saveLayerButton').addEventListener('click', saveLayerMetadata);
-$('exportButton').addEventListener('click', exportLayout);
-$('githubButton').addEventListener('click', toggleGithubPanel);
-$('testGithubButton').addEventListener('click', connectAndLoad);
-$('disconnectGithubButton').addEventListener('click', disconnectGithub);
-$('saveRepositoryButton').addEventListener('click', saveLayoutToRepository);
-$('reloadButton').addEventListener('click', loadRepositoryLayout);
-$('githubToken').addEventListener('change', readTokenFromField);
-$('importFile').addEventListener('change', event => {
-  const file = event.target.files?.[0];
-  if (file) importLayout(file);
-  event.target.value = '';
-});
-
-const saved = localStorage.getItem(STORAGE_KEY);
-if (saved) {
+function initialize() {
+  bindEvents();
+  let initial = null;
   try {
-    setLayout(JSON.parse(saved), 'Lokale Bearbeitung geladen. Mit „GitHub verbinden“ kannst du die aktuelle Repository-Version laden.');
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) initial = JSON.parse(saved);
   } catch (_) {
-    setLayout(clone(starterLayout), 'Starter-Layout geladen.');
+    initial = null;
   }
-} else {
-  setLayout(clone(starterLayout), 'Starter-Layout geladen. Zum Bearbeiten des privaten Repository-Layouts bitte „GitHub verbinden“ wählen.');
+
+  try {
+    setLayout(initial || clone(starterLayout), initial ? 'Lokalen Editor-Stand geladen.' : 'Starter-Layout geladen. Mit GitHub verbinden, um das aktuelle Repository-Layout zu laden.');
+  } catch (error) {
+    setLayout(clone(starterLayout), `Lokaler Stand war ungültig: ${error.message}`);
+  }
 }
+
+initialize();
