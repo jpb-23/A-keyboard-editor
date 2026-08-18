@@ -2,30 +2,54 @@
 
 Grafischer Browser-Editor für das Tastaturlayout des privaten Android-Projekts `jpb-23/A-keyboard`.
 
-Der Editor selbst ist öffentlich und enthält keine privaten Daten oder Zugangsdaten. Die Verbindung zum privaten Repository erfolgt im Browser über ein Fine-grained Personal Access Token.
-
-## GitHub Pages aktivieren
-
-1. Dieses Repository öffnen.
-2. **Settings → Pages** öffnen.
-3. Unter **Build and deployment** bei **Source** `Deploy from a branch` wählen.
-4. Branch `main` und Ordner `/(root)` auswählen.
-5. **Save** anklicken.
-
-Danach ist der Editor normalerweise unter folgender Adresse erreichbar:
+Der Editor ist über GitHub Pages erreichbar:
 
 ```text
 https://jpb-23.github.io/A-keyboard-editor/
 ```
 
-## Fine-grained Token anlegen
+## Verbindung zum privaten Repository
 
-Für das direkte Laden und Speichern im privaten Repository sollte ein möglichst eng begrenztes Fine-grained Personal Access Token verwendet werden:
+Der Editor selbst ist öffentlich und enthält keine privaten Zugangsdaten. Für das direkte Laden und Speichern wird im Browser ein Fine-grained Personal Access Token verwendet.
+
+Empfohlene Token-Berechtigung:
 
 - Repository access: nur `jpb-23/A-keyboard`
 - Repository permissions → Contents: `Read and write`
 
-Das Token wird vom Editor nur im Arbeitsspeicher der geöffneten Browser-Seite gehalten. Es wird nicht in `localStorage` gespeichert und nicht in dieses öffentliche Repository geschrieben.
+Das Token bleibt nur im Arbeitsspeicher der geöffneten Browser-Seite und wird nicht in `localStorage` gespeichert.
+
+## Bearbeitbare Tasteneigenschaften
+
+Für jede Taste können unter anderem eingestellt werden:
+
+- Beschriftung
+- ausgegebener Text oder Funktion
+- Ziel-Ebene
+- Breite
+- Stil `Normal`, `Funktion` oder `Akzent`
+- eigene Tastenfarbe
+- eigene Textfarbe
+- eigenes Bild-Icon als PNG, JPG oder WebP
+- Wiederholung bei Gedrückthalten
+
+Bild-Icons sind auf 64 KB pro Taste begrenzt. Sie werden als Data-URL direkt in `keyboard-layout.json` gespeichert. Dadurch braucht die Android-App keine zusätzlichen Icon-Dateien.
+
+## Emoji-Ebene
+
+Die Ebene `emoji` mit der Beschriftung `😊 Emoji` gehört zur erweiterten Tastatur. Bei älteren Layout-Dateien wird sie automatisch ergänzt. Sie kann anschließend wie andere Ebenen grafisch bearbeitet werden.
+
+Zusätzlich werden bei den Ebenen `ABC`, `123` und `CODE` automatisch Emoji-Wechseltasten ergänzt, falls sie dort noch fehlen.
+
+## Wiederholen beim Gedrückthalten
+
+`Delete`, Cursor links und Cursor rechts sind standardmäßig als wiederholbar markiert. Im Editor kann die Option **Bei Gedrückthalten wiederholen** auch für normale Texttasten aktiviert werden.
+
+## Wortvorschläge
+
+Die Wortvorschläge werden nicht im Browser-Editor berechnet, sondern in der Android-Tastatur. Auf der ABC-Ebene erscheint oberhalb der Tasten eine Vorschlagsleiste mit bis zu drei Treffern für den aktuellen Wortanfang.
+
+Die Vorschläge arbeiten lokal/offline aus dem im Android-Projekt enthaltenen Wörterbuch. Passwortfelder erhalten keine Vorschläge.
 
 ## Benutzung
 
@@ -33,22 +57,17 @@ Das Token wird vom Editor nur im Arbeitsspeicher der geöffneten Browser-Seite g
 2. **GitHub verbinden** anklicken.
 3. Fine-grained Token einfügen.
 4. **Verbinden & laden** anklicken.
-5. Ebene `ABC`, `123` oder `CODE` auswählen.
-6. Eine Taste anklicken und rechts Beschriftung, Text/Funktion, Breite oder Darstellung bearbeiten.
-7. Bei Bedarf Tasten, Zeilen oder Ebenen hinzufügen oder löschen.
-8. **Im Repository speichern** anklicken.
+5. Ebene auswählen.
+6. Taste anklicken und rechts bearbeiten.
+7. **Im Repository speichern** anklicken.
 
-Der Editor aktualisiert dann direkt:
+Der Editor aktualisiert direkt:
 
 ```text
 jpb-23/A-keyboard
 └── app/src/main/assets/keyboard-layout.json
 ```
 
-Der Commit auf `main` startet im privaten Repository automatisch den vorhandenen GitHub-Actions-Workflow und erzeugt eine neue APK.
+Der Commit auf `main` startet im privaten Repository den GitHub-Actions-Workflow für die signierte APK.
 
-## Sicherheit
-
-Der Editor selbst enthält keinen GitHub-Token. Ein eingegebenes Token wird nicht persistent gespeichert. Beim Neuladen oder Schließen der Seite muss es erneut eingegeben werden.
-
-Zusätzlich bleiben **JSON importieren** und **JSON exportieren** als manuelle Sicherungs-/Austauschmöglichkeit verfügbar.
+`JSON importieren` und `JSON exportieren` bleiben zusätzlich als manuelle Sicherungs- und Austauschmöglichkeit verfügbar.
