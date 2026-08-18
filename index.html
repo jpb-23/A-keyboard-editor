@@ -52,7 +52,7 @@
       </div>
 
       <div class="feature-note">
-        Die Ebene <strong>😊 Emoji</strong> wird bei älteren Layouts automatisch ergänzt. Wortvorschläge erscheinen in der Android-Tastatur automatisch oberhalb der ABC-Ebene und werden lokal/offline erzeugt.
+        <strong>😊 Emoji</strong>, <strong>📋 Clipboard</strong> und <strong>Entf</strong> werden bei älteren Standard-Layouts ergänzt. Die ausgewählte Zeile kann mit <strong>Zeile ↑</strong> und <strong>Zeile ↓</strong> verschoben werden.
       </div>
 
       <div id="layerTabs" class="layer-tabs"></div>
@@ -81,7 +81,7 @@
           <select id="keyAction">
             <option value="">Text ausgeben</option>
             <option value="shift">Shift</option>
-            <option value="backspace">Löschen</option>
+            <option value="backspace">Löschen rückwärts</option>
             <option value="space">Leerzeichen</option>
             <option value="enter">Enter</option>
             <option value="left">Cursor links</option>
@@ -137,7 +137,7 @@
           <input id="keyRepeat" type="checkbox">
           Bei Gedrückthalten wiederholen
         </label>
-        <small class="muted compact-note">Delete sowie Cursor links/rechts sind standardmäßig wiederholbar. Für normale Zeichen kannst du die Wiederholung pro Taste aktivieren.</small>
+        <small class="muted compact-note">⌫, Entf sowie Cursor links/rechts können bei Gedrückthalten kontinuierlich wiederholen.</small>
 
         <div class="form-actions">
           <button id="moveLeftButton" type="button">← verschieben</button>
@@ -167,5 +167,6 @@
   </main>
 
   <script src="app.js"></script>
+  <script src="enhancements.js"></script>
 </body>
 </html>
